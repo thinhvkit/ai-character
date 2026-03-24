@@ -72,3 +72,13 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+*.blend
+.mcp.json
+
+# Godot
+character-project/.godot/
+character-project/export_credentials.cfg
+android/app/src/main/assets/GodotExample/*
+ios/GodotExample.pck
+*.import
+character-project/addons/godot_mcp/*

@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://sk8i4ucbv0yw"]
+
+[ext_resource type="PackedScene" uid="uid://baw7fm5xnhi2s" path="res://player/sophia_skin/sophia_skin.tscn" id="1_ig7tw"]
+
+[node name="Main" type="Node3D"]
+
+[node name="SophiaSkin" parent="." instance=ExtResource("1_ig7tw")]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.86239964, -0.28940105, 0.41534802, -0.076936774, 0.73601586, 0.6725782, -0.50034755, -0.6119867, 0.6124742, 0, 1.9222093, 1.6279491)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.110878706, 1.1463569, 1.8088634)

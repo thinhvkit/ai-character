@@ -1,60 +1,93 @@
 /**
  * React Native Godot Example
  * Demonstrates embedding Godot Engine into a React Native app
- */
+*/
 
-import React, {useState, useCallback} from 'react';
+// @ts-ignore: Ignore missing types for react-native-godot
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   Platform,
 } from 'react-native';
+
+// @ts-ignore: Ignore missing types for @borndotcom/react-native-godot
 import {
   RTNGodot,
   RTNGodotView,
   runOnGodotThread,
 } from '@borndotcom/react-native-godot';
 import * as FileSystem from 'react-native-fs';
+import * as Device from "expo-device";
+
 
 function App(): React.JSX.Element {
   const [isGodotRunning, setIsGodotRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Godot not started');
+  const [animInput, setAnimInput] = useState('');
 
   const initGodot = useCallback(() => {
+    const name = "GodotExample";
+    if (RTNGodot.getInstance() != null) {
+      console.log("Godot was already initialized.");
+      setIsGodotRunning(true);
+      setStatusMessage('Godot engine running');
+      return;
+    }
+    console.log("Initializing Godot");
+
     runOnGodotThread(() => {
-      'worklet';
-      if (Platform.OS === 'android') {
+      "worklet";
+      console.log("Running on Godot Thread");
+
+      if (Platform.OS === "android") {
         RTNGodot.createInstance([
-          '--verbose',
-          '--path',
-          '/main',
-          '--rendering-driver',
-          'opengl3',
-          '--rendering-method',
-          'gl_compatibility',
-          '--display-driver',
-          'embedded',
+          "--verbose",
+          "--path",
+          "/" + name,
+          "--rendering-driver",
+          "opengl3",
+          "--rendering-method",
+          "gl_compatibility",
+          "--display-driver",
+          "embedded",
         ]);
       } else {
-        // iOS configuration
-        RTNGodot.createInstance([
-          '--verbose',
-          '--main-pack',
-          FileSystem.MainBundlePath + '/GodotTest.pck',
-          '--rendering-driver',
-          'opengl3',
-          '--rendering-method',
-          'gl_compatibility',
-          '--display-driver',
-          'embedded',
-        ]);
+        let args = [
+          "--verbose",
+          "--main-pack",
+          FileSystem.MainBundlePath + "/" + name + ".pck",
+          "--display-driver",
+          "embedded",
+        ];
+
+        if (Device.isDevice) {
+          args.push(
+            "--rendering-driver",
+            "opengl3",
+            "--rendering-method",
+            "gl_compatibility"
+          );
+        } else {
+          args.push(
+            "--rendering-driver",
+            "metal",
+            "--rendering-method",
+            "mobile"
+          );
+        }
+
+        console.log("Godot Args: " + Device.modelName + " " + args.join(" "));
+        RTNGodot.createInstance(args);
       }
     });
+
     setIsGodotRunning(true);
     setStatusMessage('Godot engine running');
   }, []);
@@ -67,6 +100,13 @@ function App(): React.JSX.Element {
     setIsGodotRunning(false);
     setIsPaused(false);
     setStatusMessage('Godot stopped');
+  }, []);
+
+  useEffect(() => {
+    initGodot();
+    return () => {
+      destroyGodot();
+    };
   }, []);
 
   const togglePause = useCallback(() => {
@@ -82,61 +122,34 @@ function App(): React.JSX.Element {
     setStatusMessage(isPaused ? 'Godot resumed' : 'Godot paused');
   }, [isPaused]);
 
-  const accessGodotAPI = useCallback(() => {
+  const sendAnimation = useCallback((anim: string, audioPath: string = "res://assets/test-audio.wav") => {
     if (!isGodotRunning) {
       setStatusMessage('Start Godot first!');
       return;
     }
-
-    runOnGodotThread(() => {
-      'worklet';
-      // Access the Godot API
-      const Godot = RTNGodot.API();
-
-      // Create a Vector2
-      const vector = Godot.Vector2();
-      vector.x = 100.0;
-      vector.y = 200.0;
-
-      // Access the engine and scene tree
-      const engine = Godot.Engine;
-      const sceneTree = engine.get_main_loop();
-
-      if (sceneTree) {
-        const root = sceneTree.get_root();
-        console.log('Root node:', root);
-      }
-    });
-    setStatusMessage('Godot API accessed - check console');
-  }, [isGodotRunning]);
-
-  const createGodotButton = useCallback(() => {
-    if (!isGodotRunning) {
-      setStatusMessage('Start Godot first!');
-      return;
-    }
+    const animName = anim.trim();
+    if (!animName) return;
 
     runOnGodotThread(() => {
       'worklet';
       const Godot = RTNGodot.API();
-
-      // Create a button in Godot
-      const button = Godot.Button();
-      button.set_text('Hello from React Native!');
-
-      // Connect to the pressed signal
-      button.pressed.connect(() => {
-        console.log('Godot button pressed!');
-      });
-
-      // Add button to the scene
       const sceneTree = Godot.Engine.get_main_loop();
       if (sceneTree) {
         const root = sceneTree.get_root();
-        root.add_child(button);
+        const sophiaSkin = root.get_node('Main/SophiaSkin');
+        if (sophiaSkin) {
+          switch (animName) {
+            case 'talk_audio':
+              sophiaSkin.call(animName, audioPath);
+              break;
+            default:
+              sophiaSkin.call(animName);
+              break;
+          }
+        }
       }
     });
-    setStatusMessage('Button created in Godot scene');
+    setStatusMessage(`Animation: ${animName}`);
   }, [isGodotRunning]);
 
   return (
@@ -148,7 +161,7 @@ function App(): React.JSX.Element {
         <Text style={styles.subtitle}>Embedded Game Engine Demo</Text>
       </View>
 
-      {/* Godot View - This is where the Godot engine renders */}
+      {/* Godot View */}
       <View style={styles.godotContainer}>
         <RTNGodotView style={styles.godotView} />
         {!isGodotRunning && (
@@ -165,7 +178,7 @@ function App(): React.JSX.Element {
         <View
           style={[
             styles.statusDot,
-            {backgroundColor: isGodotRunning ? '#4ade80' : '#ef4444'},
+            { backgroundColor: isGodotRunning ? '#4ade80' : '#ef4444' },
           ]}
         />
         <Text style={styles.statusText}>{statusMessage}</Text>
@@ -173,14 +186,6 @@ function App(): React.JSX.Element {
 
       {/* Control buttons */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={isGodotRunning ? destroyGodot : initGodot}>
-          <Text style={styles.buttonText}>
-            {isGodotRunning ? 'Stop Godot' : 'Start Godot'}
-          </Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[
             styles.button,
@@ -195,35 +200,36 @@ function App(): React.JSX.Element {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.tertiaryButton,
-            !isGodotRunning && styles.disabledButton,
-          ]}
-          onPress={accessGodotAPI}
-          disabled={!isGodotRunning}>
-          <Text style={styles.buttonText}>Access API</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.tertiaryButton,
-            !isGodotRunning && styles.disabledButton,
-          ]}
-          onPress={createGodotButton}
-          disabled={!isGodotRunning}>
-          <Text style={styles.buttonText}>Create Button</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.infoContainer}>
-        <Text style={styles.infoText}>
-          Note: You need a Godot project exported as .pck file{'\n'}
-          Place main.pck in assets (Android) or bundle (iOS)
-        </Text>
+      {/* SophiaSkin animation control */}
+      <View style={styles.animContainer}>
+        <Text style={styles.animLabel}>SophiaSkin Animation</Text>
+        <View style={styles.animRow}>
+          <TextInput
+            style={styles.animInput}
+            value={animInput}
+            onChangeText={setAnimInput}
+            placeholder="fall / jump / walk_side / edge_grab / talk"
+            placeholderTextColor="#4a4a6a"
+            autoCapitalize="none"
+          />
+          <TouchableOpacity
+            style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
+            onPress={() => sendAnimation(animInput)}
+            disabled={!isGodotRunning}>
+            <Text style={styles.buttonText}>Send</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.buttonContainer}>
+          {['idle', 'move', 'talk_audio'].map((anim) => (
+            <TouchableOpacity
+              key={anim}
+              style={[styles.button, styles.animQuickButton, !isGodotRunning && styles.disabledButton]}
+              onPress={() => sendAnimation(anim)}
+              disabled={!isGodotRunning}>
+              <Text style={styles.buttonText}>{anim}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -310,9 +316,6 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: '#7c3aed',
   },
-  tertiaryButton: {
-    backgroundColor: '#0891b2',
-  },
   disabledButton: {
     backgroundColor: '#3f3f5a',
     opacity: 0.6,
@@ -322,15 +325,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  infoContainer: {
-    padding: 16,
-    marginTop: 8,
+  animContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  infoText: {
-    color: '#6b6b8a',
+  animLabel: {
+    color: '#8b8b9e',
     fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  animRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  animInput: {
+    flex: 1,
+    backgroundColor: '#16213e',
+    color: '#ffffff',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#2a2a4a',
+  },
+  animSendButton: {
+    backgroundColor: '#4f46e5',
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animQuickButton: {
+    backgroundColor: '#0f766e',
   },
 });
 
