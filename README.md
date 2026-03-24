@@ -1,79 +1,124 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# AI Character — React Native + Godot
 
-# Getting Started
+A React Native app that embeds the Godot Engine to render an animated 3D character (Sophia) with real-time audio-driven lip sync.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+## Features
 
-## Step 1: Start the Metro Server
+- Godot 4 engine embedded in React Native via `@borndotcom/react-native-godot`
+- Sophia 3D character with skeletal animation
+- Mouth open/close via texture swap (no mesh deformation)
+- Auto-blinking eyes using UV texture atlas
+- Talking animation — two modes:
+  - **Timer-based**: random mouth toggle at 0.1–0.2s intervals
+  - **Audio-driven**: mouth follows real-time audio peak volume via `AudioServer`
+- React Native → Godot bridge to trigger animations and voice lines
+- Supports Android and iOS
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+## Project Structure
 
-To start Metro, run the following command from the _root_ of your React Native project:
-
-```bash
-# using npm
-npm start
-
-# OR using Yarn
-yarn start
+```
+├── App.tsx                          # React Native entry point
+├── character-project/               # Godot 4 source project
+│   ├── player/sophia_skin/
+│   │   ├── sophia_skin.gd           # Character controller script
+│   │   ├── sophia_skin.tscn         # Character scene
+│   │   └── model/
+│   │       ├── sophia.glb           # 3D model
+│   │       ├── sophia_mouth_smile_diffuse.png
+│   │       ├── sophia_mouth_open_diffuse.png
+│   │       ├── materials/
+│   │       │   ├── mouth_mat.tres
+│   │       │   └── eye_mat_override.tres
+│   │       └── textures/
+│   │           └── eyes_diffuse_map.png   # Eye atlas (open/closed)
+│   └── assets/
+│       └── test-audio.wav
+├── android/
+└── ios/
 ```
 
-## Step 2: Start your Application
+## Setup
 
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
+### Prerequisites
 
-### For Android
+- Node.js + Yarn
+- Godot 4.x (to edit/export the character project)
+- Android Studio + SDK (for Android)
+- Xcode + Apple Developer account (for iOS)
+
+### Install
 
 ```bash
-# using npm
-npm run android
-
-# OR using Yarn
-yarn android
+yarn install
 ```
 
-### For iOS
+### iOS
 
 ```bash
-# using npm
-npm run ios
-
-# OR using Yarn
+cd ios && pod install && cd ..
 yarn ios
 ```
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+### Android
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+```bash
+yarn android
+```
 
-## Step 3: Modifying your App
+## Godot Character API
 
-Now that you have successfully run the app, let's modify it.
+The `SophiaSkin` node exposes these methods callable from React Native:
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+| Method | Description |
+|---|---|
+| `idle()` | Play idle animation |
+| `move()` | Play move animation |
+| `jump()` | Play jump animation |
+| `fall()` | Play fall animation |
+| `edge_grab()` | Play edge grab animation |
+| `wall_slide()` | Play wall slide animation |
+| `talk()` | Start mouth animation (timer-based) |
+| `stop_talk()` | Stop mouth animation |
+| `talk_audio(path)` | Play audio + mouth animation (audio-driven) |
+| `set_mouth_open(bool)` | Manually open/close mouth |
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+## Calling from React Native
 
-## Congratulations! :tada:
+```tsx
+import { RTNGodot, runOnGodotThread } from '@borndotcom/react-native-godot';
 
-You've successfully run and modified your React Native App. :partying_face:
+runOnGodotThread(() => {
+  'worklet';
+  const Godot = RTNGodot.API();
+  const root = Godot.Engine.get_main_loop().get_root();
+  const sophiaSkin = root.get_node('Main/SophiaSkin');
 
-### Now what?
+  // Play animation
+  sophiaSkin.call('idle');
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
+  // Talk with audio (must be a res:// Godot resource path)
+  sophiaSkin.call('talk_audio', 'res://assets/test-audio.wav');
+});
+```
 
-# Troubleshooting
+## How Lip Sync Works
 
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+1. `talk_audio(path)` loads the audio stream and plays it through a dedicated `VoiceBus`
+2. `AudioEffectCapture` is attached to `VoiceBus` to enable peak metering on all platforms including mobile
+3. Every frame, `_process()` reads `AudioServer.get_bus_peak_volume_left_db()`
+4. Mouth opens when volume > `-30 dB`, closes otherwise
+5. When audio ends, the `finished` signal calls `stop_talk()` automatically
 
-# Learn More
+Tune sensitivity in `sophia_skin.gd`:
+```gdscript
+const _OPEN_THRESHOLD_DB := -30.0  # lower = more sensitive
+```
 
-To learn more about React Native, take a look at the following resources:
+## Exporting the Godot Project
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+After editing `character-project/`, re-export for each platform using **Project → Export** in the Godot editor. Presets are already configured in `export_presets.cfg`.
+
+| Platform | Output path |
+|---|---|
+| Android | `android/app/src/main/assets/GodotExample/` |
+| iOS | `ios/GodotExample.pck` |
