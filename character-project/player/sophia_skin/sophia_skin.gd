@@ -23,9 +23,9 @@ var _audio_driven := false
 const _VOICE_BUS := "VoiceBus"
 const _OPEN_THRESHOLD_DB := -30.0
 const _EMOTION_ANIMATIONS := {
-	"happy":   "Idle",
+	"happy":   "Jump",
 	"sad":     "Fall",
-	"excited": "Jump",
+	"excited": "Move",
 	"angry":   "EdgeGrab",
 	"neutral": "Idle",
 }

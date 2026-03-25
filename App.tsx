@@ -130,7 +130,7 @@ function App(): React.JSX.Element {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
-      continuous: true,
+      continuous: false,
     });
     setStatusMessage('Listening...');
   }, []);
@@ -202,126 +202,126 @@ function App(): React.JSX.Element {
 
   return (
     <SafeAreaProvider>
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior="padding"
-      >
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoid}
+          behavior="padding"
+        >
 
-      <View style={styles.header}>
-        <Text style={styles.title}>React Native Godot</Text>
-        <Text style={styles.subtitle}>Embedded Game Engine Demo</Text>
-      </View>
-
-      {/* Godot View */}
-      <View style={styles.godotContainer}>
-        <RTNGodotView style={styles.godotView} />
-        {!isGodotRunning && (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>
-              Godot Engine View{'\n'}Press "Start Godot" to begin
-            </Text>
+          <View style={styles.header}>
+            <Text style={styles.title}>React Native Godot</Text>
+            <Text style={styles.subtitle}>Embedded Game Engine Demo</Text>
           </View>
-        )}
-      </View>
 
-      {/* Status indicator */}
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusDot,
-            { backgroundColor: isGodotRunning ? '#4ade80' : '#ef4444' },
-          ]}
-        />
-        <Text style={styles.statusText}>{statusMessage}</Text>
-      </View>
+          {/* Godot View */}
+          <View style={styles.godotContainer}>
+            <RTNGodotView style={styles.godotView} />
+            {!isGodotRunning && (
+              <View style={styles.placeholder}>
+                <Text style={styles.placeholderText}>
+                  Godot Engine View{'\n'}Press "Start Godot" to begin
+                </Text>
+              </View>
+            )}
+          </View>
 
-      {/* Control buttons */}
-      <View style={styles.buttonContainer}>
+          {/* Status indicator */}
+          <View style={styles.statusContainer}>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: isGodotRunning ? '#4ade80' : '#ef4444' },
+              ]}
+            />
+            <Text style={styles.statusText}>{statusMessage}</Text>
+          </View>
 
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.primaryButton,
-          ]}
-          onPress={() => { !isGodotRunning ? initGodot() : destroyGodot() }}>
-          <Text style={styles.buttonText}>
-            {isGodotRunning ? 'Destroy' : 'Start Godot'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.secondaryButton,
-            !isGodotRunning && styles.disabledButton,
-          ]}
-          onPress={togglePause}
-          disabled={!isGodotRunning}>
-          <Text style={styles.buttonText}>
-            {isPaused ? 'Resume' : 'Pause'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Control buttons */}
+          <View style={styles.buttonContainer}>
 
-      {/* Chat input */}
-      <View style={styles.animContainer}>
-        <Text style={styles.animLabel}>Chat with Sophia</Text>
-        <View style={styles.animRow}>
-          <TextInput
-            style={styles.animInput}
-            value={chatInput}
-            onChangeText={setChatInput}
-            placeholder="Type a message..."
-            placeholderTextColor="#4a4a6a"
-          />
-          <TouchableOpacity
-            style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
-            onPress={() => { sendChat(chatInput); setChatInput(''); }}
-            disabled={!isGodotRunning}>
-            <Text style={styles.buttonText}>Chat</Text>
-          </TouchableOpacity>
-          {!recognizing ? (
             <TouchableOpacity
-              style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
-              onPress={() => { startVoice(); }}
-              disabled={!isGodotRunning}>
-              <Text style={styles.buttonText}>Voice</Text>
+              style={[
+                styles.button,
+                styles.primaryButton,
+              ]}
+              onPress={() => { !isGodotRunning ? initGodot() : destroyGodot() }}>
+              <Text style={styles.buttonText}>
+                {isGodotRunning ? 'Destroy' : 'Start Godot'}
+              </Text>
             </TouchableOpacity>
-          ) : (
             <TouchableOpacity
-              style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
-              onPress={() => { ExpoSpeechRecognitionModule.stop() }}
+              style={[
+                styles.button,
+                styles.secondaryButton,
+                !isGodotRunning && styles.disabledButton,
+              ]}
+              onPress={togglePause}
               disabled={!isGodotRunning}>
-              <Text style={styles.buttonText}>Stop</Text>
+              <Text style={styles.buttonText}>
+                {isPaused ? 'Resume' : 'Pause'}
+              </Text>
             </TouchableOpacity>
+          </View>
 
-          )}
-        </View>
-      </View>
+          {/* Chat input */}
+          <View style={styles.animContainer}>
+            <Text style={styles.animLabel}>Chat with Sophia</Text>
+            <View style={styles.animRow}>
+              <TextInput
+                style={styles.animInput}
+                value={chatInput}
+                onChangeText={setChatInput}
+                placeholder="Type a message..."
+                placeholderTextColor="#4a4a6a"
+              />
+              <TouchableOpacity
+                style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
+                onPress={() => { sendChat(chatInput); setChatInput(''); }}
+                disabled={!isGodotRunning}>
+                <Text style={styles.buttonText}>Chat</Text>
+              </TouchableOpacity>
+              {!recognizing ? (
+                <TouchableOpacity
+                  style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
+                  onPress={() => { startVoice(); }}
+                  disabled={!isGodotRunning}>
+                  <Text style={styles.buttonText}>Voice</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
+                  onPress={() => { ExpoSpeechRecognitionModule.stop() }}
+                  disabled={!isGodotRunning}>
+                  <Text style={styles.buttonText}>Stop</Text>
+                </TouchableOpacity>
 
-      {/* SophiaSkin animation control */}
-      <View style={styles.animContainer}>
-        <Text style={styles.animLabel}>SophiaSkin Animation</Text>
-        <View style={styles.animRow}>
-          <TextInput
-            style={styles.animInput}
-            value={animInput}
-            onChangeText={setAnimInput}
-            placeholder="fall / jump / walk_side / edge_grab / talk"
-            placeholderTextColor="#4a4a6a"
-            autoCapitalize="none"
-          />
-          <TouchableOpacity
-            style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
-            onPress={() => sendAnimation(animInput)}
-            disabled={!isGodotRunning}>
-            <Text style={styles.buttonText}>Send</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              )}
+            </View>
+          </View>
+
+          {/* SophiaSkin animation control */}
+          <View style={styles.animContainer}>
+            <Text style={styles.animLabel}>SophiaSkin Animation</Text>
+            <View style={styles.animRow}>
+              <TextInput
+                style={styles.animInput}
+                value={animInput}
+                onChangeText={setAnimInput}
+                placeholder="fall / jump / walk_side / edge_grab / talk"
+                placeholderTextColor="#4a4a6a"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
+                onPress={() => sendAnimation(animInput)}
+                disabled={!isGodotRunning}>
+                <Text style={styles.buttonText}>Send</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </SafeAreaProvider>
   );
 }
