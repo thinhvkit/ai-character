@@ -22,6 +22,13 @@ var _audio_driven := false
 
 const _VOICE_BUS := "VoiceBus"
 const _OPEN_THRESHOLD_DB := -30.0
+const _EMOTION_ANIMATIONS := {
+	"happy":   "Idle",
+	"sad":     "Fall",
+	"excited": "Jump",
+	"angry":   "EdgeGrab",
+	"neutral": "Idle",
+}
 
 func _ready():
 	blink_timer.connect("timeout", func():
@@ -47,6 +54,7 @@ func _ready():
 	chat_stream.set_bus(_VOICE_BUS)
 	chat_stream.finished.connect(stop_talk)
 	chat_stream.stream_error.connect(func(_msg): stop_talk())
+	chat_stream.emotion_detected.connect(_on_emotion)
 
 func set_blink(state : bool):
 	if blink == state: return
@@ -85,6 +93,10 @@ func chat(message: String):
 	_audio_driven = true
 	chat_stream.start(message)
 
+func _on_emotion(emotion: String):
+	var anim : String = _EMOTION_ANIMATIONS.get(emotion, "Idle")
+	state_machine.travel(anim)
+
 func stop_talk():
 	_is_talking = false
 	_audio_driven = false
@@ -92,6 +104,7 @@ func stop_talk():
 	voice_player.stop()
 	chat_stream.stop()
 	set_mouth_open(false)
+	state_machine.travel("Idle")
 
 func _process(_delta):
 	if not _is_talking or not _audio_driven:

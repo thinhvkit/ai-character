@@ -4,6 +4,7 @@ class_name ChatStream extends Node
 
 signal finished
 signal stream_error(message: String)
+signal emotion_detected(emotion: String)
 
 @export var server_host := "localhost"
 @export var server_port := 3000
@@ -116,6 +117,13 @@ func _parse_sse_buffer() -> void:
 			if _http_client:
 				_http_client.close()
 				_http_client = null
+			return
+		# Check for emotion JSON event
+		var json := JSON.new()
+		if json.parse(payload) == OK:
+			var data = json.get_data()
+			if data is Dictionary and data.get("type") == "emotion":
+				emotion_detected.emit(data.get("value", "neutral"))
 			return
 		_pcm_queue.append_array(Marshalls.base64_to_raw(payload))
 
