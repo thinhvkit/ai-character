@@ -6,7 +6,7 @@ signal finished
 signal stream_error(message: String)
 signal emotion_detected(emotion: String)
 
-@export var server_host := "localhost"
+@export var server_host := "10.30.2.46"
 @export var server_port := 3000
 
 const _SAMPLE_RATE := 22050.0
@@ -134,7 +134,7 @@ func _push_pcm_frames() -> void:
 	if frames_available <= 0:
 		return
 	# Mono 16-bit LE PCM: 2 bytes per sample → Vector2(L, R) stereo frame
-	var samples := min(_pcm_queue.size() / 2, frames_available)
+	var samples: int = min(_pcm_queue.size() >> 1, frames_available)
 	if samples <= 0:
 		return
 	var frames := PackedVector2Array()

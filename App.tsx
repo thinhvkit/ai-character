@@ -156,17 +156,18 @@ function App(): React.JSX.Element {
   }, [isPaused]);
 
   const sendChat = useCallback((message: string) => {
-    if (!isGodotRunning || !message.trim()) return;
+    const trimmed = message.trim();
+    if (!isGodotRunning || !trimmed) return;
     runOnGodotThread(() => {
       'worklet';
       const Godot = RTNGodot.API();
       const root = Godot.Engine.get_main_loop().get_root();
       const sophiaSkin = root.get_node('Main/SophiaSkin');
       if (sophiaSkin) {
-        sophiaSkin.call('chat', message.trim());
+        sophiaSkin.call('chat', trimmed);
       }
     });
-    setStatusMessage(`Chat: ${message.trim()}`);
+    setStatusMessage(`Chat: ${trimmed}`);
   }, [isGodotRunning]);
 
   const sendAnimation = useCallback((anim: string, audioPath: string = "res://assets/test-audio.wav") => {
