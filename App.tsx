@@ -3,10 +3,9 @@
  * Demonstrates embedding Godot Engine into a React Native app
 */
 
-// @ts-ignore: Ignore missing types for react-native-godot
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  SafeAreaView,
+  KeyboardAvoidingView,
   StatusBar,
   StyleSheet,
   Text,
@@ -15,13 +14,19 @@ import {
   View,
   Platform,
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-// @ts-ignore: Ignore missing types for @borndotcom/react-native-godot
 import {
   RTNGodot,
   RTNGodotView,
   runOnGodotThread,
 } from '@borndotcom/react-native-godot';
+
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
+
 import * as FileSystem from 'react-native-fs';
 import * as Device from "expo-device";
 
@@ -31,6 +36,19 @@ function App(): React.JSX.Element {
   const [isPaused, setIsPaused] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Godot not started');
   const [animInput, setAnimInput] = useState('');
+  const [chatInput, setChatInput] = useState('');
+  const [recognizing, setRecognizing] = useState(false);
+
+  useSpeechRecognitionEvent("start", () => setRecognizing(true));
+  useSpeechRecognitionEvent("end", () => setRecognizing(false));
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcript = event.results[0]?.transcript || "";
+    setStatusMessage(`Listening: ${transcript}`);
+    sendChat(transcript);
+  });
+  useSpeechRecognitionEvent("error", (event) => {
+    console.log("error code:", event.error, "error message:", event.message);
+  });
 
   const initGodot = useCallback(() => {
     const name = "GodotExample";
@@ -102,12 +120,27 @@ function App(): React.JSX.Element {
     setStatusMessage('Godot stopped');
   }, []);
 
-  useEffect(() => {
-    initGodot();
-    return () => {
-      destroyGodot();
-    };
+  const startVoice = useCallback(async () => {
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      console.warn("Permissions not granted", result);
+      return;
+    }
+    // Start speech recognition
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      interimResults: true,
+      continuous: true,
+    });
+    setStatusMessage('Listening...');
   }, []);
+
+  // useEffect(() => {
+  //   initGodot();
+  //   return () => {
+  //     destroyGodot();
+  //   };
+  // }, []);
 
   const togglePause = useCallback(() => {
     runOnGodotThread(() => {
@@ -121,6 +154,20 @@ function App(): React.JSX.Element {
     setIsPaused(!isPaused);
     setStatusMessage(isPaused ? 'Godot resumed' : 'Godot paused');
   }, [isPaused]);
+
+  const sendChat = useCallback((message: string) => {
+    if (!isGodotRunning || !message.trim()) return;
+    runOnGodotThread(() => {
+      'worklet';
+      const Godot = RTNGodot.API();
+      const root = Godot.Engine.get_main_loop().get_root();
+      const sophiaSkin = root.get_node('Main/SophiaSkin');
+      if (sophiaSkin) {
+        sophiaSkin.call('chat', message.trim());
+      }
+    });
+    setStatusMessage(`Chat: ${message.trim()}`);
+  }, [isGodotRunning]);
 
   const sendAnimation = useCallback((anim: string, audioPath: string = "res://assets/test-audio.wav") => {
     if (!isGodotRunning) {
@@ -153,8 +200,14 @@ function App(): React.JSX.Element {
   }, [isGodotRunning]);
 
   return (
+    <SafeAreaProvider>
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
 
       <View style={styles.header}>
         <Text style={styles.title}>React Native Godot</Text>
@@ -186,6 +239,17 @@ function App(): React.JSX.Element {
 
       {/* Control buttons */}
       <View style={styles.buttonContainer}>
+
+        <TouchableOpacity
+          style={[
+            styles.button,
+            styles.primaryButton,
+          ]}
+          onPress={() => { !isGodotRunning ? initGodot() : destroyGodot() }}>
+          <Text style={styles.buttonText}>
+            {isGodotRunning ? 'Destroy' : 'Start Godot'}
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.button,
@@ -198,6 +262,42 @@ function App(): React.JSX.Element {
             {isPaused ? 'Resume' : 'Pause'}
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Chat input */}
+      <View style={styles.animContainer}>
+        <Text style={styles.animLabel}>Chat with Sophia</Text>
+        <View style={styles.animRow}>
+          <TextInput
+            style={styles.animInput}
+            value={chatInput}
+            onChangeText={setChatInput}
+            placeholder="Type a message..."
+            placeholderTextColor="#4a4a6a"
+          />
+          <TouchableOpacity
+            style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
+            onPress={() => { sendChat(chatInput); setChatInput(''); }}
+            disabled={!isGodotRunning}>
+            <Text style={styles.buttonText}>Chat</Text>
+          </TouchableOpacity>
+          {!recognizing ? (
+            <TouchableOpacity
+              style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
+              onPress={() => { startVoice(); }}
+              disabled={!isGodotRunning}>
+              <Text style={styles.buttonText}>Voice</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.animSendButton, !isGodotRunning && styles.disabledButton]}
+              onPress={() => { ExpoSpeechRecognitionModule.stop() }}
+              disabled={!isGodotRunning}>
+              <Text style={styles.buttonText}>Stop</Text>
+            </TouchableOpacity>
+
+          )}
+        </View>
       </View>
 
       {/* SophiaSkin animation control */}
@@ -219,19 +319,10 @@ function App(): React.JSX.Element {
             <Text style={styles.buttonText}>Send</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.buttonContainer}>
-          {['idle', 'move', 'talk_audio'].map((anim) => (
-            <TouchableOpacity
-              key={anim}
-              style={[styles.button, styles.animQuickButton, !isGodotRunning && styles.disabledButton]}
-              onPress={() => sendAnimation(anim)}
-              disabled={!isGodotRunning}>
-              <Text style={styles.buttonText}>{anim}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -239,6 +330,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a2e',
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   header: {
     paddingVertical: 20,
