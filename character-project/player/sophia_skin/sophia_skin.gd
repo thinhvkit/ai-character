@@ -11,6 +11,7 @@ var run_tilt = 0.0 : set = _set_run_tilt
 @onready var closed_eyes_timer = %ClosedEyesTimer
 @onready var talk_timer = %TalkTimer
 @onready var voice_player = %VoicePlayer
+@onready var chat_stream : ChatStream = %ChatStream
 @onready var eye_mat = $sophia/rig/Skeleton3D/Sophia.get("surface_material_override/2")
 @onready var mouth_mat = $sophia/rig/Skeleton3D/Sophia.get("surface_material_override/3")
 
@@ -43,6 +44,9 @@ func _ready():
 		AudioServer.set_bus_send(idx, "Master")
 		AudioServer.add_bus_effect(idx, AudioEffectCapture.new())
 	voice_player.bus = _VOICE_BUS
+	chat_stream.set_bus(_VOICE_BUS)
+	chat_stream.finished.connect(stop_talk)
+	chat_stream.stream_error.connect(func(_msg): stop_talk())
 
 func set_blink(state : bool):
 	if blink == state: return
@@ -76,11 +80,17 @@ func talk_with_audio(stream: AudioStream):
 	voice_player.stream = stream
 	voice_player.play()
 
+func chat(message: String):
+	_is_talking = true
+	_audio_driven = true
+	chat_stream.start(message)
+
 func stop_talk():
 	_is_talking = false
 	_audio_driven = false
 	talk_timer.stop()
 	voice_player.stop()
+	chat_stream.stop()
 	set_mouth_open(false)
 
 func _process(_delta):

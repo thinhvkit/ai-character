@@ -81,6 +81,7 @@ The `SophiaSkin` node exposes these methods callable from React Native:
 | `stop_talk()` | Stop mouth animation |
 | `talk_audio(path)` | Play audio + mouth animation (audio-driven) |
 | `set_mouth_open(bool)` | Manually open/close mouth |
+| `chat(message)` | Stream audio from server SSE endpoint + lip sync |
 
 ## Calling from React Native
 
@@ -100,6 +101,31 @@ runOnGodotThread(() => {
   sophiaSkin.call('talk_audio', 'res://assets/test-audio.wav');
 });
 ```
+
+## Chat Streaming (SSE Audio)
+
+`chat(message)` connects to `POST /chat/audio` on the configured server and streams audio in real-time:
+
+1. Opens an `HTTPClient` connection to `server_host:server_port` (default `localhost:3000`)
+2. Parses SSE events: `data: <base64_pcm>\n\n`
+3. Decodes base64 → raw 16-bit mono PCM at 22050 Hz
+4. Pushes samples into an `AudioStreamGenerator` playback buffer
+5. Lip sync runs automatically via `AudioServer` peak volume metering
+6. When `data: [DONE]` is received, waits for the generator buffer to drain then stops
+
+Configure the server address via `@export` vars (settable in the Godot editor):
+```gdscript
+@export var server_host := "localhost"  # use "10.0.2.2" for Android emulator
+@export var server_port := 3000
+```
+
+Expected server SSE format:
+```
+data: <base64-encoded raw PCM chunk>\n\n
+...
+data: [DONE]\n\n
+```
+Audio spec: 22050 Hz, 16-bit signed little-endian, mono.
 
 ## How Lip Sync Works
 

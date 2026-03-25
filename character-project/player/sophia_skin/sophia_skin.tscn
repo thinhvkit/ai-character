@@ -1,7 +1,8 @@
-[gd_scene load_steps=40 format=3 uid="uid://baw7fm5xnhi2s"]
+[gd_scene load_steps=41 format=3 uid="uid://baw7fm5xnhi2s"]
 
 [ext_resource type="PackedScene" uid="uid://16iu10wxub40" path="res://player/sophia_skin/model/sophia.glb" id="1_e4pev"]
 [ext_resource type="Script" uid="uid://carlbvkekxu1y" path="res://player/sophia_skin/sophia_skin.gd" id="1_obcib"]
+[ext_resource type="Script" path="res://player/sophia_skin/chat_stream.gd" id="6_cstream"]
 [ext_resource type="Material" uid="uid://dye01l0ct4fby" path="res://player/sophia_skin/model/materials/eye_mat_override.tres" id="4_mms51"]
 [ext_resource type="Material" uid="uid://ejs88styylln" path="res://player/sophia_skin/model/materials/mouth_mat.tres" id="5_mouth"]
 [ext_resource type="AudioStream" uid="uid://cx1doou5k3ckg" path="res://assets/test-audio.wav" id="5_r7l8c"]
@@ -326,5 +327,11 @@ one_shot = true
 [node name="VoicePlayer" type="AudioStreamPlayer" parent="."]
 unique_name_in_owner = true
 stream = ExtResource("5_r7l8c")
+
+[node name="ChatStream" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("6_cstream")
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="ChatStream"]
 
 [editable path="sophia"]
