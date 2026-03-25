@@ -205,8 +205,7 @@ function App(): React.JSX.Element {
       <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior="padding"
       >
 
       <View style={styles.header}>
