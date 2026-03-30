@@ -9,7 +9,7 @@ signal emotion_detected(emotion: String)
 @export var server_host := "10.30.2.46"
 @export var server_port := 3000
 
-const _SAMPLE_RATE := 22050.0
+const _SAMPLE_RATE := 16000.0
 const _BUFFER_LENGTH := 0.5  # seconds
 
 @onready var _player : AudioStreamPlayer = $AudioStreamPlayer
